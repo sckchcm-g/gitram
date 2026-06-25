@@ -44,7 +44,7 @@ func printHelp() {
     print("  \(dim("First time setup:"))")
     print("  \(dim("  1. gitram setup             → configure OAuth App"))")
     print("  \(dim("  2. gitram add               → authenticate accounts"))")
-    print("  \(dim("  3. git config --global credential.helper gitram"))")
+    print("  \(dim("  3. git config --global credential.helper /usr/local/bin/gitram"))")
     print()
 }
 
@@ -72,7 +72,7 @@ func cmdSetup(clientId: String?) {
         print()
         print(dim("  Next steps:"))
         print(dim("    gitram add <username>"))
-        print(dim("    git config --global credential.helper gitram"))
+        print(dim("    git config --global credential.helper /usr/local/bin/gitram"))
         print()
         return
     }
@@ -207,7 +207,7 @@ func cmdAddBrowser(username: String?, clientId: String) {
     let helper = Git.configValue("credential.helper") ?? ""
     if !helper.contains("gitram") {
         print(dim("  Set GitRAM as credential helper:"))
-        print(dim("    git config --global credential.helper gitram"))
+        print(dim("    git config --global credential.helper /usr/local/bin/gitram"))
         print()
     }
 }
@@ -377,7 +377,27 @@ func cmdDoctor() {
     UI.printCheck(label: "Inside a Git repository", ok: repoRoot != nil)
 
     let helper = Git.configValue("credential.helper") ?? ""
-    UI.printCheck(label: "credential.helper = gitram", ok: helper.contains("gitram"), detail: helper.isEmpty ? "not set" : helper)
+    var helperOk = false
+    var helperDetail = helper.isEmpty ? "not set" : helper
+    
+    if !helper.isEmpty {
+        if helper.starts(with: "/") {
+            helperOk = FileManager.default.fileExists(atPath: helper)
+            if !helperOk {
+                helperDetail = "executable not found at \(helper)"
+            }
+        } else if helper == "gitram" {
+            let whichOut = Shell.run("which git-credential-gitram")
+            if whichOut.succeeded && !whichOut.stdout.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                helperOk = true
+            } else {
+                helperDetail = "git-credential-gitram not found in PATH"
+            }
+        } else {
+            helperOk = helper.contains("gitram")
+        }
+    }
+    UI.printCheck(label: "credential.helper configured", ok: helperOk, detail: helperDetail)
 
     let clientId = GitHubAuth.clientId
     UI.printCheck(label: "OAuth App configured", ok: clientId != nil, detail: clientId.map { String($0.prefix(8)) + "..." } ?? "run: gitram setup")
@@ -393,6 +413,15 @@ func cmdDoctor() {
     if let root = repoRoot {
         let account = Git.getCurrentAccount(workingDirectory: root)
         UI.printCheck(label: "Active account set", ok: account != nil, detail: account ?? "none")
+    }
+    
+    if !helperOk {
+        print()
+        UI.printWarning("Credential helper is not configured properly.")
+        print(dim("  To fix, run either of these commands:"))
+        print(bold("    git config --global credential.helper /usr/local/bin/gitram"))
+        print(dim("  OR (to keep helper name as 'gitram'):"))
+        print(bold("    sudo ln -sf /usr/local/bin/gitram /usr/local/bin/git-credential-gitram"))
     }
     print()
 }
