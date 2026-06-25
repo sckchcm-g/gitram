@@ -1,8 +1,8 @@
 # GitRAM
 
-Git Repository Account Manager (GitRAM) is a lightweight terminal wrapper around Git and Git Credential Manager (GCM) for macOS. It simplifies switching between multiple GitHub accounts for local repositories.
+Git Repository Account Manager (GitRAM) is a lightweight terminal wrapper around Git for macOS. It simplifies switching between multiple GitHub accounts for local repositories and securely manages credentials.
 
-GitRAM does **not** store any passwords, OAuth tokens, or credentials; it delegates all authentication directly to GCM and the macOS Keychain.
+GitRAM stores your GitHub Personal Access Tokens (PATs) securely in the macOS Keychain under the service name `gitram`.
 
 ---
 
@@ -11,7 +11,7 @@ GitRAM does **not** store any passwords, OAuth tokens, or credentials; it delega
 1. **Prerequisites**:
    * macOS 13 or newer.
    * Swift 6 / Xcode Command Line Tools.
-   * Git Credential Manager (GCM) installed (e.g., via Homebrew: `brew install git-credential-manager`).
+   * Git Credential Manager (GCM) (optional, for migration/cache cleanup).
 
 2. **Build**:
    Compile the release version of the binary:
@@ -20,9 +20,15 @@ GitRAM does **not** store any passwords, OAuth tokens, or credentials; it delega
    ```
 
 3. **Install**:
-   Copy the binary to a directory in your system `$PATH` (e.g., `/usr/local/bin`):
+   Copy the binary to `/usr/local/bin`:
    ```bash
-   cp .build/release/gitram /usr/local/bin/gitram
+   sudo cp .build/release/gitram /usr/local/bin/gitram
+   ```
+
+4. **Configure Git**:
+   Register GitRAM as your global credential helper:
+   ```bash
+   git config --global credential.helper /usr/local/bin/gitram
    ```
 
 ---
@@ -46,7 +52,7 @@ gitram
 
 ---
 
-## 🔒 Background & Daemon Status
+## 🔒 Background & Security
 
 * **No Background Processes**: GitRAM is a one-shot CLI utility. It does **not** run in the background, has no background services, no daemons, and consumes zero system resources when not actively running.
-* **No Credential Storage**: All tokens, keys, and credentials remain securely managed by GCM and the macOS Keychain.
+* **Secure Credential Storage**: All Personal Access Tokens are stored securely in the native macOS Keychain under the `gitram` service and are accessed only when Git requests credentials.
