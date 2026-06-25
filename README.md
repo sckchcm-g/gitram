@@ -33,22 +33,55 @@ GitRAM stores your GitHub Personal Access Tokens (PATs) securely in the macOS Ke
 
 ---
 
-## 🚀 Usage
+## 🚀 Commands Reference & Usage
 
-Navigate to any local Git repository directory and run:
+### 1. Switch Account (Default)
+Navigate to any local Git repository and run `gitram` to switch its active GitHub account:
 ```bash
 gitram
 ```
+*It detects the local repository and displays a menu to select from your authenticated accounts. When selected, it configures `credential.username` locally for that repository.*
 
-### What GitRAM does:
-1. Detects the local repository and its `origin` remote URL.
-2. Lists the GitHub accounts stored in Git Credential Manager.
-3. Identifies the account currently associated with the repository.
-4. Renders a menu allowing you to select another account.
-5. If a new account is chosen:
-   * Sets the local Git username configuration (`git config credential.username`).
-   * Erases the previous repository-specific credential entry.
-   * Triggers GCM authentication to sign in or retrieve credentials for the new account.
+### 2. Add a New User/Account
+To authenticate and add a new GitHub account to GitRAM:
+```bash
+gitram add
+# Or add a specific username:
+gitram add <username>
+```
+*You will be prompted to choose between **Browser login** (OAuth device flow, requires one-time `gitram setup`) and **Personal Access Token** (generate a PAT at github.com/settings/tokens with `repo` and `read:org` scopes, and paste it).*
+
+### 3. List Registered Accounts
+To list all GitHub accounts registered with GitRAM and check their authentication status:
+```bash
+gitram accounts
+```
+
+### 4. Show Status
+To check the current repository information and its active GitHub account details:
+```bash
+gitram status
+```
+
+### 5. Remove a User/Account
+To remove a GitHub account and securely delete its token from the macOS Keychain:
+```bash
+gitram remove
+# Or remove a specific username:
+gitram remove <username>
+```
+
+### 6. Run Diagnostics
+To troubleshoot setup issues and check if your credential helper and keychain configuration are healthy:
+```bash
+gitram doctor
+```
+
+### 7. Setup OAuth App (Optional)
+If you want to use the browser-based login instead of manual PAT input, configure your own GitHub OAuth App client ID:
+```bash
+gitram setup
+```
 
 ---
 
