@@ -528,9 +528,21 @@ func credentialGet() {
     guard input["host"]?.contains("github.com") == true else { exit(1) }
 
     var username = input["username"] ?? ""
+
+    // Priority 1: username provided by git in the credential protocol input
     if username.isEmpty {
-        username = Git.getCurrentAccount(workingDirectory: FileManager.default.currentDirectoryPath) ?? ""
+        // Priority 2: detect repo root via git rev-parse (works even if CWD ≠ repo root)
+        let repoRoot = Git.detectRepositoryRoot()
+        let cwd = repoRoot ?? FileManager.default.currentDirectoryPath
+        username = Git.getCurrentAccount(workingDirectory: cwd) ?? ""
     }
+
+    // Priority 3: global credential.username (covers repos without a local override)
+    if username.isEmpty {
+        username = Git.configValue("credential.username") ?? ""
+    }
+
+    // Priority 4: last resort — first account that actually has a stored token
     if username.isEmpty {
         username = AccountStore.all().first(where: { TokenStore.hasToken(for: $0) }) ?? ""
     }
