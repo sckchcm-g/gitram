@@ -527,22 +527,25 @@ func credentialGet() {
     let input = parseCredentialInput()
     guard input["host"]?.contains("github.com") == true else { exit(1) }
 
-    var username = input["username"] ?? ""
+    // Priority 1: What gitram has configured for THIS repo via `gitram switch`.
+    // We must check this FIRST — git often passes a stale username from its own
+    // cache (input["username"]), which would serve the wrong account's token.
+    let repoRoot = Git.detectRepositoryRoot()
+    let cwd = repoRoot ?? FileManager.default.currentDirectoryPath
+    var username = Git.getCurrentAccount(workingDirectory: cwd) ?? ""
 
-    // Priority 1: username provided by git in the credential protocol input
+    // Priority 2: What git provided in the credential protocol input.
+    // Only use this if gitram has no opinion about the active account.
     if username.isEmpty {
-        // Priority 2: detect repo root via git rev-parse (works even if CWD ≠ repo root)
-        let repoRoot = Git.detectRepositoryRoot()
-        let cwd = repoRoot ?? FileManager.default.currentDirectoryPath
-        username = Git.getCurrentAccount(workingDirectory: cwd) ?? ""
+        username = input["username"] ?? ""
     }
 
-    // Priority 3: global credential.username (covers repos without a local override)
+    // Priority 3: global credential.username
     if username.isEmpty {
         username = Git.configValue("credential.username") ?? ""
     }
 
-    // Priority 4: last resort — first account that actually has a stored token
+    // Priority 4: last resort — first account that has a stored token
     if username.isEmpty {
         username = AccountStore.all().first(where: { TokenStore.hasToken(for: $0) }) ?? ""
     }
