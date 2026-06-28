@@ -91,54 +91,41 @@ public struct GitHubAuth {
 
     /// Fetches the GitHub username for the given OAuth token.
     public static func validateToken(_ token: String) -> String? {
-        var request = URLRequest(url: apiURL, timeoutInterval: 20)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        guard let json = syncFetch(request: request) else { return nil }
+        guard let json = get(url: apiURL, token: token) else { return nil }
         return extractJSONValue(json, key: "login")
     }
 
+
     // MARK: - HTTP Helpers
 
-    // Box for safe cross-thread state sharing (URLSession callback is on a different thread).
-    private final class Box: @unchecked Sendable {
-        var body: String?
-        var errorDescription: String?
-    }
-
     private static func post(url: URL, body: String) -> String? {
-        var request = URLRequest(url: url, timeoutInterval: 20)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.httpBody = body.data(using: .utf8)
-        return syncFetch(request: request)
+        let result = Shell.runArgs([
+            "/usr/bin/curl",
+            "--silent",
+            "--max-time", "30",
+            "-X", "POST",
+            "-H", "Accept: application/json",
+            "-H", "Content-Type: application/x-www-form-urlencoded",
+            "--data-raw", body,
+            url.absoluteString
+        ])
+        if !result.stdout.isEmpty { return result.stdout }
+        fputs("[gitram] network error (exit \(result.exitCode)): \(result.stderr)\n", stderr)
+        return nil
     }
 
-    /// Performs a synchronous URLSession request.
-    /// Uses DispatchGroup.wait() which blocks the calling thread while allowing
-    /// URLSession's internal callback queue (a different thread) to fire normally.
-    private static func syncFetch(request: URLRequest) -> String? {
-        let box   = Box()
-        let group = DispatchGroup()
-
-        group.enter()
-        URLSession.shared.dataTask(with: request) { data, _, error in
-            box.body             = data.flatMap { String(data: $0, encoding: .utf8) }
-            box.errorDescription = error?.localizedDescription
-            group.leave()
-        }.resume()
-
-        let timeout = group.wait(timeout: .now() + 25)
-        if timeout == .timedOut {
-            fputs("[gitram] network: request timed out (25s)\n", stderr)
-            return nil
-        }
-        if let err = box.errorDescription {
-            fputs("[gitram] network error: \(err)\n", stderr)
-        }
-        return box.body
+    private static func get(url: URL, token: String) -> String? {
+        let result = Shell.runArgs([
+            "/usr/bin/curl",
+            "--silent",
+            "--max-time", "20",
+            "-H", "Authorization: Bearer \(token)",
+            "-H", "Accept: application/vnd.github+json",
+            url.absoluteString
+        ])
+        return result.stdout.isEmpty ? nil : result.stdout
     }
+
 
     // MARK: - JSON Helper
 

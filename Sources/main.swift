@@ -165,7 +165,12 @@ func cmdAddBrowser(username: String?, clientId: String) {
 
     UI.printDim("  Requesting authentication code...")
     guard let deviceCode = GitHubAuth.requestDeviceCode(clientId: clientId) else {
-        UI.printError("Failed to reach GitHub. Check your network connection.")
+        UI.printError("Failed to get device code from GitHub.")
+        print(dim("  Possible causes:"))
+        print(dim("    • Device Flow is not enabled on your OAuth App"))
+        print(dim("      → github.com/settings/developers → your app → enable Device Flow"))
+        print(dim("    • Client ID is wrong — run: gitram setup"))
+        print(dim("    • No network connection"))
         exit(1)
     }
 
